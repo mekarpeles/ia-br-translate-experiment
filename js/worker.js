@@ -179,9 +179,10 @@ gemm-precision: int8shiftAll
 `;
 
   const commonPath = `${rootURL}/models`;
-  const modelFile = `${commonPath}/${modelRegistry[languagePair]["model"].name}`;
+  let modelFile = `${commonPath}/${modelRegistry[languagePair]["model"].name}`;
+  const modelFileFallback = `https://cors.archive.org/cors/mozilla-translate-models/${modelRegistry[languagePair]["model"].name}`;
+
   let vocabFiles;
-  const modelURL = `https://archive.org/download/mozilla-translate-models`;  
   const shortlistFile = `${commonPath}/${modelRegistry[languagePair]["lex"].name}`;
   if (("srcvocab" in modelRegistry[languagePair]) && ("trgvocab" in modelRegistry[languagePair])) {
         vocabFiles = [`${commonPath}/${modelRegistry[languagePair]["srcvocab"].name}`,
@@ -197,7 +198,15 @@ gemm-precision: int8shiftAll
 
   // Download the files as buffers from the given urls
   let start = Date.now();
-  const downloadedBuffers = await Promise.all([downloadAsArrayBuffer(modelFile), downloadAsArrayBuffer(shortlistFile)]);
+
+  const downloadedBuffers = await Promise.all([
+    downloadAsArrayBuffer(modelFile).catch(() => {
+      console.log(`Failed to download from ${modelFile}, using fallback: ${modelFileFallback}`);
+      return downloadAsArrayBuffer(modelFileFallback); // Ensure this is returned
+    }),
+    downloadAsArrayBuffer(shortlistFile)
+  ]);
+
   const modelBuffer = downloadedBuffers[0];
   const shortListBuffer = downloadedBuffers[1];
 
